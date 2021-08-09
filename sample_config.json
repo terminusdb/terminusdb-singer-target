@@ -1,5 +1,4 @@
 {
-  "username": "my_username",
-  "password": "my_password",
-  "start_date": "2017-01-01T00:00:00Z"
+  "server": "http://127.0.0.1:6363/",
+  "database": "my_project"
 }

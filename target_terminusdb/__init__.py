@@ -15,6 +15,9 @@ import pkg_resources
 from jsonschema.validators import Draft4Validator
 import singer
 
+from terminusdb_client import WOQLClient
+from terminusdb_client.errors import DatabaseError
+
 logger = singer.get_logger()
 
 def emit_state(state):
@@ -40,6 +43,16 @@ def persist_lines(config, lines):
     key_properties = {}
     headers = {}
     validators = {}
+
+    client = WOQLClient(config["server"])
+    client.connect()
+    try:
+        client.create_database(config["database"])
+    except DatabaseError as error:
+        if "Database already exists." in str(error):
+            client.connect(db=config["database"])
+        else:
+            raise InterfaceError(f"Cannot connect to {config['database']}.")
     # Initize list for terminusdb client
     class_dict_list = []
     doc_dict_list = []
@@ -78,7 +91,6 @@ def persist_lines(config, lines):
             doc_dict = {'@type': o['stream']}
             doc_dict.update(o['record'])
             doc_dict_list.append(doc_dict)
-            print(doc_dict_list)
 
             state = None
         elif t == 'STATE':
@@ -100,14 +112,26 @@ def persist_lines(config, lines):
             for key, value in o['schema']["properties"].items():
                 class_dict[key] = 'xsd:' + value["type"]
                 if "format" in value and value["format"] == "date-time":
-                    class_dict[key] = "xsd:dataTime"
+                    class_dict[key] = "xsd:dateTime"
 
             class_dict_list.append(class_dict)
-            print(class_dict_list)
         else:
             raise Exception("Unknown message type {} in message {}"
                             .format(o['type'], o))
 
+    print(class_dict_list)
+    client.insert_document(
+                class_dict_list,
+                commit_msg="Schema objects insert by Singer.io target.",
+                graph_type="schema",
+            )
+    print("Schema inserted")
+    print(doc_dict_list)
+    client.insert_document(
+                doc_dict_list,
+                commit_msg="Dcouments insert by Singer.io target.",
+            )
+    print("Documents inserted")
     return state
 
 
@@ -136,8 +160,15 @@ def main():
     args = parser.parse_args()
 
     if args.config:
-        with open(args.config) as input:
-            config = json.load(input)
+        if args.config.split('.')[-1] == 'json':
+            with open(args.config) as input:
+                config = json.load(input)
+        elif args.config.split('.')[-1] == 'py':
+            sys.path.append(os.getcwd())
+            _temp = __import__(args.config.split('.')[0], globals(), locals(), ["SERVER", "DATABASE"], 0)
+            server = _temp.SERVER
+            database = _temp.DATABASE
+            config = {"server": server, "database": database}
     else:
         config = {}
 
