@@ -33,14 +33,17 @@ def flatten(d, parent_key='', sep='__'):
         else:
             items.append((new_key, str(v) if type(v) is list else v))
     return dict(items)
-        
+
 def persist_lines(config, lines):
     state = None
     schemas = {}
     key_properties = {}
     headers = {}
     validators = {}
-    
+    # Initize list for terminusdb client
+    class_dict_list = []
+    doc_dict_list = []
+
     now = datetime.now().strftime('%Y%m%dT%H%M%S')
 
     # Loop over lines from stdin
@@ -69,8 +72,13 @@ def persist_lines(config, lines):
 
             # If the record needs to be flattened, uncomment this line
             # flattened_record = flatten(o['record'])
-            
+
             # TODO: Process Record message here..
+
+            doc_dict = {'@type': o['stream']}
+            doc_dict.update(o['record'])
+            doc_dict_list.append(doc_dict)
+            print(doc_dict_list)
 
             state = None
         elif t == 'STATE':
@@ -85,10 +93,21 @@ def persist_lines(config, lines):
             if 'key_properties' not in o:
                 raise Exception("key_properties field is required")
             key_properties[stream] = o['key_properties']
+
+            # TODO: Process Schema message here..
+
+            class_dict = {"@type": "Class", "@id": stream, "@key": {"@type": "Lexical", "@fields": o['key_properties']}}
+            for key, value in o['schema']["properties"].items():
+                class_dict[key] = 'xsd:' + value["type"]
+                if "format" in value and value["format"] == "date-time":
+                    class_dict[key] = "xsd:dataTime"
+
+            class_dict_list.append(class_dict)
+            print(class_dict_list)
         else:
             raise Exception("Unknown message type {} in message {}"
                             .format(o['type'], o))
-    
+
     return state
 
 
@@ -130,7 +149,7 @@ def main():
 
     input = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
     state = persist_lines(config, input)
-        
+
     emit_state(state)
     logger.debug("Exiting normally")
 

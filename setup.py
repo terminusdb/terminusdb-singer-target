@@ -2,21 +2,22 @@
 from setuptools import setup
 
 setup(
-    name="terget-terminusdb",
+    name="target-terminusdb",
     version="0.1.0",
-    description="Singer.io target for extracting data",
-    author="Stitch",
+    description="Singer.io target for inserting data in TerminusDB",
+    author="Cheuk",
     url="http://singer.io",
     classifiers=["Programming Language :: Python :: 3 :: Only"],
-    py_modules=["terget_terminusdb"],
+    py_modules=["target_terminusdb"],
     install_requires=[
         "singer-python>=5.0.12",
+        # "terminusdb-client>=2.0.0"
     ],
     entry_points="""
     [console_scripts]
-    terget-terminusdb=terget_terminusdb:main
+    target-terminusdb=target_terminusdb:main
     """,
-    packages=["terget_terminusdb"],
+    packages=["target_terminusdb"],
     package_data = {},
     include_package_data=True,
 )
