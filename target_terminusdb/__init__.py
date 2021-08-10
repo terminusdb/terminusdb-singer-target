@@ -17,6 +17,7 @@ import singer
 
 from terminusdb_client import WOQLClient
 from terminusdb_client.errors import DatabaseError
+from terminusdb_client.woqlschema import LexicalKey
 
 logger = singer.get_logger()
 
@@ -90,6 +91,7 @@ def persist_lines(config, lines):
 
             doc_dict = {'@type': o['stream']}
             doc_dict.update(o['record'])
+            doc_dict['@id'] = LexicalKey(key_properties[o['stream']]).idgen(doc_dict)
             doc_dict_list.append(doc_dict)
 
             state = None
@@ -119,15 +121,13 @@ def persist_lines(config, lines):
             raise Exception("Unknown message type {} in message {}"
                             .format(o['type'], o))
 
-    print(class_dict_list)
-    client.insert_document(
+    client.update_document(
                 class_dict_list,
                 commit_msg="Schema objects insert by Singer.io target.",
                 graph_type="schema",
             )
     print("Schema inserted")
-    print(doc_dict_list)
-    client.insert_document(
+    client.update_document(
                 doc_dict_list,
                 commit_msg="Dcouments insert by Singer.io target.",
             )
