@@ -11,7 +11,7 @@ setup(
     py_modules=["target_terminusdb"],
     install_requires=[
         "singer-python>=5.0.12",
-        # "terminusdb-client>=2.0.0"
+        "terminusdb-client>=10.0.0"
     ],
     entry_points="""
     [console_scripts]
