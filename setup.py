@@ -9,15 +9,12 @@ setup(
     url="http://singer.io",
     classifiers=["Programming Language :: Python :: 3 :: Only"],
     py_modules=["target_terminusdb"],
-    install_requires=[
-        "singer-python>=5.0.12",
-        "terminusdb-client>=10.0.0"
-    ],
+    install_requires=["singer-python>=5.0.12", "terminusdb-client>=10.0.8"],
     entry_points="""
     [console_scripts]
     target-terminusdb=target_terminusdb:main
     """,
     packages=["target_terminusdb"],
-    package_data = {},
+    package_data={},
     include_package_data=True,
 )
