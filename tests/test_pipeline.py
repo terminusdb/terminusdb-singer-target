@@ -17,4 +17,3 @@ def test_happy_path(docker_url, tmp_path):
     result = subprocess.run(
         command.split(" "), capture_output=True, check=True, input=result.stdout
     )
-    assert result.stdout == b"Schema inserted\nDocuments inserted\n"
