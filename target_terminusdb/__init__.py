@@ -15,6 +15,8 @@ import singer
 from jsonschema.validators import Draft4Validator
 from terminusdb_client.scripts.scripts import _connect, _load_settings
 from terminusdb_client.woqlschema import LexicalKey
+from terminusdb_client.errors import DatabaseError
+from terminusdb_client.scripts.scripts import _sync
 
 logger = singer.get_logger()
 
@@ -45,10 +47,14 @@ def persist_lines(config, lines):
     validators = {}
 
     client, _ = _connect(config)
+    buffer_size = config.get("buffer")
+
+    if buffer_size is None:
+        buffer_size = 1000
 
     # Initize list for terminusdb client
-    class_dict_list = []
     doc_dict_list = []
+    doc_ids = []
 
     datetime.now().strftime("%Y%m%dT%H%M%S")
 
@@ -75,7 +81,7 @@ def persist_lines(config, lines):
                 )
 
             # Get schema for this record's stream
-            schemas[o["stream"]]
+            # record_schema = schemas[o["stream"]]
 
             # Validate record
             validators[o["stream"]].validate(o["record"])
@@ -88,9 +94,29 @@ def persist_lines(config, lines):
             doc_dict = {"@type": o["stream"]}
             doc_dict.update(o["record"])
             doc_dict["@id"] = LexicalKey(key_properties[o["stream"]]).idgen(doc_dict)
-            doc_dict_list.append(doc_dict)
+            if doc_dict["@id"] not in doc_ids:
+                doc_dict_list.append(doc_dict)
+                doc_ids.append(doc_dict["@id"])
 
             state = None
+
+            if len(doc_dict_list) >= buffer_size:
+                try:
+                    client.update_document(
+                        doc_dict_list,
+                        commit_msg="Dcouments insert by Singer.io target.",
+                    )
+                    logger.info("Documents inserted")
+                except DatabaseError as error:
+                    logger.info("Error inserting documents")
+                    with open(".terminusdb_error_log", "a") as file:
+                        file.write("\nDocument insert error:\n")
+                        file.write(str(error))
+                        file.write("\nwhile insert\n")
+                        file.write(str(doc_dict_list))
+                        file.write("\n===================\n")
+                finally:
+                    doc_dict_list=[]
         elif t == "STATE":
             logger.debug("Setting state to {}".format(o["value"]))
             state = o["value"]
@@ -109,30 +135,45 @@ def persist_lines(config, lines):
             class_dict = {
                 "@type": "Class",
                 "@id": stream,
-                "@key": {"@type": "Lexical", "@fields": o["key_properties"]},
             }
             for key, value in o["schema"]["properties"].items():
-                class_dict[key] = "xsd:" + value["type"]
+                if isinstance(value["type"], str):
+                    if value["type"] == "number":
+                        class_dict[key] = "xsd:decimal"
+                    else:
+                        class_dict[key] = "xsd:" + value["type"]
+                elif 'null' in value["type"]:
+                    convert_type = value["type"][-1]
+                    if convert_type == "number":
+                        class_dict[key] = {"@type": "Optional", "@class": "xsd:decimal"}
+                    else:
+                        class_dict[key] = {"@type": "Optional", "@class": "xsd:" + convert_type}
                 if "format" in value and value["format"] == "date-time":
                     class_dict[key] = "xsd:dateTime"
 
-            class_dict_list.append(class_dict)
+            # schema got update immediately
+
+            try:
+                client.update_document(
+                    class_dict,
+                    commit_msg="Schema objects insert by Singer.io target.",
+                    graph_type="schema",
+                )
+                logger.info(f"Schema of {stream} inserted")
+                logger.info(_sync(client))
+            except DatabaseError as error:
+                logger.info(f"Error inserting schema of {stream}")
+                with open(".terminusdb_error_log", "a") as file:
+                    file.write("Schema insert error:\n")
+                    file.write(str(error))
+                    file.write("\nWhile insert:\n")
+                    file.write(str(class_dict))
+                    file.write("\n===================\n")
         else:
             raise Exception(
                 "Unknown message type {} in message {}".format(o["type"], o)
             )
 
-    client.update_document(
-        class_dict_list,
-        commit_msg="Schema objects insert by Singer.io target.",
-        graph_type="schema",
-    )
-    print("Schema inserted")  # noqa:T001
-    client.update_document(
-        doc_dict_list,
-        commit_msg="Dcouments insert by Singer.io target.",
-    )
-    print("Documents inserted")  # noqa:T001
     return state
 
 

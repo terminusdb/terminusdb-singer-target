@@ -34,7 +34,7 @@ setup(
     url="http://singer.io",
     classifiers=["Programming Language :: Python :: 3 :: Only"],
     py_modules=["target_terminusdb"],
-    install_requires=["singer-python>=5.0.12", "terminusdb-client>=10.0.8"],
+    install_requires=["singer-python>=5.0.12", "terminusdb-client>=10.0.11"],
     entry_points="""
     [console_scripts]
     target-terminusdb=target_terminusdb:main
