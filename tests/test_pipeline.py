@@ -14,5 +14,7 @@ def test_happy_path(docker_url, tmp_path):
     command = "python tap_ip.py"
     result = subprocess.run(command.split(" "), capture_output=True, check=True)
     command = "target-terminusdb -c config.json"
-    result = subprocess.run(command.split(" "), capture_output=True, check=True, input=result.stdout)
-    assert result.stdout == b'Schema inserted\nDocuments inserted\n'
+    result = subprocess.run(
+        command.split(" "), capture_output=True, check=True, input=result.stdout
+    )
+    assert result.stdout == b"Schema inserted\nDocuments inserted\n"

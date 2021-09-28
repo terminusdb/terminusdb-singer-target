@@ -13,10 +13,9 @@ from datetime import datetime
 import pkg_resources
 import singer
 from jsonschema.validators import Draft4Validator
-from terminusdb_client.scripts.scripts import _connect, _load_settings
-from terminusdb_client.woqlschema import LexicalKey
 from terminusdb_client.errors import DatabaseError
-from terminusdb_client.scripts.scripts import _sync
+from terminusdb_client.scripts.scripts import _connect, _load_settings, _sync
+from terminusdb_client.woqlschema import LexicalKey
 
 logger = singer.get_logger()
 
@@ -116,7 +115,7 @@ def persist_lines(config, lines):
                         file.write(str(doc_dict_list))
                         file.write("\n===================\n")
                 finally:
-                    doc_dict_list=[]
+                    doc_dict_list = []
         elif t == "STATE":
             logger.debug("Setting state to {}".format(o["value"]))
             state = o["value"]
@@ -142,12 +141,15 @@ def persist_lines(config, lines):
                         class_dict[key] = "xsd:decimal"
                     else:
                         class_dict[key] = "xsd:" + value["type"]
-                elif 'null' in value["type"]:
+                elif "null" in value["type"]:
                     convert_type = value["type"][-1]
                     if convert_type == "number":
                         class_dict[key] = {"@type": "Optional", "@class": "xsd:decimal"}
                     else:
-                        class_dict[key] = {"@type": "Optional", "@class": "xsd:" + convert_type}
+                        class_dict[key] = {
+                            "@type": "Optional",
+                            "@class": "xsd:" + convert_type,
+                        }
                 if "format" in value and value["format"] == "date-time":
                     class_dict[key] = "xsd:dateTime"
 
