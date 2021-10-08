@@ -26,7 +26,7 @@ for old_str, new_str in replace_pairs.items():
 
 setup(
     name="target-terminusdb",
-    version="0.1.2",
+    version="0.1.3",
     description="Singer.io target for inserting data in TerminusDB",
     long_description=long_description,
     long_description_content_type="text/markdown",
