@@ -21,11 +21,11 @@ cffi==1.14.6
     #   pynacl
 charset-normalizer==2.0.6
     # via requests
-cryptography==3.4.8
+cryptography==35.0.0
     # via paramiko
 distro==1.6.0
     # via docker-compose
-docker[ssh]==5.0.2
+docker[ssh]==5.0.3
     # via docker-compose
 docker-compose==1.29.2
     # via -r requirements.in
@@ -103,7 +103,7 @@ websocket-client==0.59.0
     # via
     #   docker
     #   docker-compose
-zipp==3.5.0
+zipp==3.6.0
     # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
