@@ -57,6 +57,22 @@ def persist_lines(config, lines):
 
     datetime.now().strftime("%Y%m%dT%H%M%S")
 
+    def push_documents(doc_dict_list):
+        try:
+            client.update_document(
+                doc_dict_list,
+                commit_msg="Dcouments insert by Singer.io target.",
+            )
+            logger.info("Documents inserted")
+        except DatabaseError as error:
+            logger.info("Error inserting documents")
+            with open(".terminusdb_error_log", "a") as file:
+                file.write("\nDocument insert error:\n")
+                file.write(str(error))
+                file.write("\nwhile insert\n")
+                file.write(str(doc_dict_list))
+                file.write("\n===================\n")
+
     # Loop over lines from stdin
     for line in lines:
         try:
@@ -109,22 +125,8 @@ def persist_lines(config, lines):
             state = None
 
             if len(doc_dict_list) >= buffer_size:
-                try:
-                    client.update_document(
-                        doc_dict_list,
-                        commit_msg="Dcouments insert by Singer.io target.",
-                    )
-                    logger.info("Documents inserted")
-                except DatabaseError as error:
-                    logger.info("Error inserting documents")
-                    with open(".terminusdb_error_log", "a") as file:
-                        file.write("\nDocument insert error:\n")
-                        file.write(str(error))
-                        file.write("\nwhile insert\n")
-                        file.write(str(doc_dict_list))
-                        file.write("\n===================\n")
-                finally:
-                    doc_dict_list = []
+                push_documents(doc_dict_list)
+                doc_dict_list = []
         elif t == "STATE":
             logger.debug("Setting state to {}".format(o["value"]))
             state = o["value"]
@@ -207,6 +209,7 @@ def persist_lines(config, lines):
                 "Unknown message type {} in message {}".format(o["type"], o)
             )
 
+    push_documents(doc_dict_list)
     return state
 
 
