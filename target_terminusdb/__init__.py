@@ -90,8 +90,17 @@ def persist_lines(config, lines):
 
             # Process Record message here..
 
+            def insert_type(doc_dict):
+                for key, value in doc_dict.items():
+                    if isinstance(value, dict):
+                        value.update(
+                            {"@type": key.replace("_", " ").title().replace(" ", "")}
+                        )
+                        insert_type(value)
+
             doc_dict = {"@type": o["stream"]}
             doc_dict.update(o["record"])
+            insert_type(doc_dict)
             doc_dict["@id"] = LexicalKey(key_properties[o["stream"]]).idgen(doc_dict)
             if doc_dict["@id"] not in doc_ids:
                 doc_dict_list.append(doc_dict)
@@ -135,29 +144,51 @@ def persist_lines(config, lines):
                 "@type": "Class",
                 "@id": stream,
             }
-            for key, value in o["schema"]["properties"].items():
+            subdocument_class = []
+
+            def construct_prop(key, value):
+                if isinstance(value["type"], list) and len(value["type"]) == 1:
+                    value["type"] = value["type"][0]
                 if isinstance(value["type"], str):
                     if value["type"] == "number":
-                        class_dict[key] = "xsd:decimal"
+                        return "xsd:decimal"
                     else:
-                        class_dict[key] = "xsd:" + value["type"]
+                        return "xsd:" + value["type"]
                 elif "null" in value["type"]:
                     convert_type = value["type"][-1]
-                    if convert_type == "number":
-                        class_dict[key] = {"@type": "Optional", "@class": "xsd:decimal"}
+                    if convert_type == "object":
+                        # makt it a subdocument
+                        subdoc_class = key.replace("_", " ").title().replace(" ", "")
+                        subdoc_prop = {}
+                        for prop_key, prop_val in value["properties"].items():
+                            subdoc_prop[prop_key] = construct_prop(prop_key, prop_val)
+                        subdoc_obj = {
+                            "@type": "Class",
+                            "@id": subdoc_class,
+                            "@subdocument": [],
+                            "@key": {"@type": "Random"},
+                        }
+                        subdoc_obj.update(subdoc_prop)
+                        subdocument_class.append(subdoc_obj)
+                        return {"@type": "Optional", "@class": subdoc_class}
+                    elif convert_type == "number":
+                        return {"@type": "Optional", "@class": "xsd:decimal"}
                     else:
-                        class_dict[key] = {
+                        return {
                             "@type": "Optional",
                             "@class": "xsd:" + convert_type,
                         }
                 if "format" in value and value["format"] == "date-time":
-                    class_dict[key] = "xsd:dateTime"
+                    return "xsd:dateTime"
+
+            for key, value in o["schema"]["properties"].items():
+                class_dict[key] = construct_prop(key, value)
 
             # schema got update immediately
 
             try:
                 client.update_document(
-                    class_dict,
+                    [class_dict] + subdocument_class,
                     commit_msg="Schema objects insert by Singer.io target.",
                     graph_type="schema",
                 )
