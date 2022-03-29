@@ -10,8 +10,6 @@ attrs==21.2.0
     #   pytest
 bcrypt==3.2.0
     # via paramiko
-cached-property==1.5.2
-    # via docker-compose
 certifi==2021.5.30
     # via requests
 cffi==1.14.6
@@ -37,18 +35,13 @@ execnet==1.9.0
     # via pytest-xdist
 idna==3.2
     # via requests
-importlib-metadata==4.8.1
-    # via
-    #   jsonschema
-    #   pluggy
-    #   pytest
 iniconfig==1.1.1
     # via pytest
 jsonschema==3.2.0
     # via docker-compose
 packaging==21.0
     # via pytest
-paramiko==2.7.2
+paramiko==2.10.1
     # via docker
 pluggy==1.0.0
     # via pytest
@@ -89,22 +82,19 @@ six==1.16.0
     #   bcrypt
     #   dockerpty
     #   jsonschema
+    #   paramiko
     #   pynacl
     #   websocket-client
 texttable==1.6.4
     # via docker-compose
 toml==0.10.2
     # via pytest
-typing-extensions==3.10.0.2
-    # via importlib-metadata
 urllib3==1.26.7
     # via requests
 websocket-client==0.59.0
     # via
     #   docker
     #   docker-compose
-zipp==3.6.0
-    # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
